@@ -12,7 +12,42 @@ def test_from_env_requires_discord_bot_token(monkeypatch):
 def test_from_env_requires_database_url(monkeypatch):
     monkeypatch.setenv("DISCORD_BOT_TOKEN", "token")
     monkeypatch.setenv("DISCORD_CHANNEL_ID", "123")
+    monkeypatch.setenv("DISCORD_GUILD_ID", "456")
     monkeypatch.delenv("DATABASE_URL", raising=False)
 
     with pytest.raises(ValueError, match="DATABASE_URL"):
         Config.from_env()
+
+
+def test_from_env_requires_discord_guild_id(monkeypatch):
+    monkeypatch.setenv("DISCORD_BOT_TOKEN", "token")
+    monkeypatch.setenv("DISCORD_CHANNEL_ID", "123")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://localhost/db")
+    monkeypatch.delenv("DISCORD_GUILD_ID", raising=False)
+
+    with pytest.raises(ValueError, match="DISCORD_GUILD_ID"):
+        Config.from_env()
+
+
+def test_from_env_parses_alert_list(monkeypatch):
+    monkeypatch.setenv("DISCORD_BOT_TOKEN", "token")
+    monkeypatch.setenv("DISCORD_CHANNEL_ID", "123")
+    monkeypatch.setenv("DISCORD_GUILD_ID", "456")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://localhost/db")
+    monkeypatch.setenv("ALERT_LIST", "111, 222,333")
+
+    config = Config.from_env()
+
+    assert config.alert_list == frozenset({111, 222, 333})
+
+
+def test_from_env_defaults_alert_list_to_empty(monkeypatch):
+    monkeypatch.setenv("DISCORD_BOT_TOKEN", "token")
+    monkeypatch.setenv("DISCORD_CHANNEL_ID", "123")
+    monkeypatch.setenv("DISCORD_GUILD_ID", "456")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://localhost/db")
+    monkeypatch.delenv("ALERT_LIST", raising=False)
+
+    config = Config.from_env()
+
+    assert config.alert_list == frozenset()

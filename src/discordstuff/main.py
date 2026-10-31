@@ -10,6 +10,9 @@ from discordstuff.jobs.base import Job
 from discordstuff.jobs.cineplex.client import CineplexClient
 from discordstuff.jobs.cineplex.job import CineplexJob
 from discordstuff.jobs.cineplex.repository import NotifiedMovieRepository
+from discordstuff.notifications.bookable_movie_subscribers import (
+    BookableMovieSubscriberRepository,
+)
 from discordstuff.notifications.discord_notifier import DiscordNotifier
 from discordstuff.scheduler import JobScheduler
 
@@ -31,7 +34,8 @@ async def main() -> None:
     pool = await create_pool(config.database_url)
     await run_migrations(pool)
 
-    notifier = DiscordNotifier(config)
+    subscribers = BookableMovieSubscriberRepository(pool)
+    notifier = DiscordNotifier(config, subscribers)
     jobs = build_jobs(config, pool)
     scheduler = JobScheduler(jobs=jobs, notifier=notifier, interval_seconds=config.job_interval_seconds)
 
