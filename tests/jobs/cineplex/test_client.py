@@ -40,6 +40,13 @@ MOVIES_BOOKABLE_SAMPLE = [
         "isEvent": False,
         "genres": ["Action"],
     },
+    {
+        "id": 62163,
+        "name": "Once Upon a Time in the Middle East (Mandarin w/Chinese and e.s.t.)",
+        "filmUrl": "once-upon-a-time-in-the-middle-east-mandarin-wchinese-and-est",
+        "isEvent": False,
+        "genres": ["International", "Drama"],
+    },
 ]
 
 THEATRES_SAMPLE = {
@@ -75,7 +82,7 @@ async def test_get_bookable_movies_parses_real_shape():
     client = CineplexClient(transport=httpx.MockTransport(handler), api_key="test-key")
     movies = await client.get_bookable_movies()
 
-    assert len(movies) == 4
+    assert len(movies) == 5
     assert movies[0].film_id == 34362
     assert movies[0].title == "Avengers: Doomsday"
     assert movies[0].slug == "avengers-doomsday"
@@ -83,10 +90,13 @@ async def test_get_bookable_movies_parses_real_shape():
     assert movies[0].is_international is False
     assert movies[1].is_event is True
 
-    # "International" genre tag
+    # "International" genre tag, not an exempt language -> excluded
     assert movies[2].is_international is True
-    # no "International" genre tag, but the title's subtitle marker still catches it
-    assert movies[3].is_international is True
+    # no "International" genre tag, but the title's subtitle marker still catches it;
+    # Japanese is an exempt language though, so it's not excluded
+    assert movies[3].is_international is False
+    # "International" genre tag, but Mandarin is exempt -> not excluded
+    assert movies[4].is_international is False
 
 
 @pytest.mark.asyncio
@@ -128,7 +138,7 @@ async def test_discovers_api_key_when_not_provided():
     movies = await client.get_bookable_movies()
 
     assert client._api_key == "d15c0ded0000000000000000000001aa"
-    assert len(movies) == 4
+    assert len(movies) == 5
 
 
 @pytest.mark.asyncio
@@ -153,7 +163,7 @@ async def test_401_rediscovers_key_and_retries_once():
     movies = await client.get_bookable_movies()
 
     assert calls_to_movies_endpoint == 2
-    assert len(movies) == 4
+    assert len(movies) == 5
 
 
 @pytest.mark.asyncio

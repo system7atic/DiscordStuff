@@ -28,11 +28,20 @@ API_KEY_PATTERN = re.compile(r'"Ocp-Apim-Subscription-Key":"([a-f0-9]{32})"')
 # separated all 19 international titles from the other 87 bookable movies.
 INTERNATIONAL_TITLE_PATTERN = re.compile(r"\((?:[^)]*\be\.?\s*s\.?\s*t\.?\b[^)]*|[^)]*dubbed[^)]*)\)", re.IGNORECASE)
 
+# Languages the user wants to see despite the "international" flagging above -
+# the API exposes no structured language field, so this matches against the
+# title's parenthetical language marker (e.g. "(Japanese w/e.s.t.)").
+EXEMPT_INTERNATIONAL_LANGUAGES = ("japanese", "mandarin", "korean")
+
 
 def _is_international(movie: dict) -> bool:
-    return "International" in movie.get("genres", []) or bool(
+    is_flagged = "International" in movie.get("genres", []) or bool(
         INTERNATIONAL_TITLE_PATTERN.search(movie["name"])
     )
+    if not is_flagged:
+        return False
+    title_lower = movie["name"].lower()
+    return not any(language in title_lower for language in EXEMPT_INTERNATIONAL_LANGUAGES)
 
 
 class CineplexAuthError(Exception):
