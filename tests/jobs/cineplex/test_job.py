@@ -7,8 +7,19 @@ from discordstuff.notifications.base import Notification
 THEATRE_ID = 1409
 OTHER_THEATRE_ID = 1145
 
-AVENGERS = BookableMovie(film_id=34362, title="Avengers: Doomsday", slug="avengers-doomsday", is_event=False)
-HAMLET_EVENT = BookableMovie(film_id=99999, title="NTL: Hamlet", slug="ntl-hamlet", is_event=True)
+AVENGERS = BookableMovie(
+    film_id=34362, title="Avengers: Doomsday", slug="avengers-doomsday", is_event=False, is_international=False
+)
+HAMLET_EVENT = BookableMovie(
+    film_id=99999, title="NTL: Hamlet", slug="ntl-hamlet", is_event=True, is_international=False
+)
+RAMAYANA_INTERNATIONAL = BookableMovie(
+    film_id=62291,
+    title="Ramayana (Hindi w/e.s.t.)",
+    slug="est-ramayana-hindi-west",
+    is_event=False,
+    is_international=True,
+)
 
 
 class FakeClient:
@@ -137,6 +148,22 @@ async def test_skips_special_events():
 
     assert notifier.sent == []
     assert not await repository.is_notified(99999)
+
+
+@pytest.mark.asyncio
+async def test_skips_international_releases():
+    client = FakeClient(
+        movies=[RAMAYANA_INTERNATIONAL],
+        theatres_by_film_id={62291: [FakeTheatre(THEATRE_ID)]},
+    )
+    repository = FakeRepository(seeded_film_ids={1})
+    notifier = FakeNotifier()
+    job = CineplexJob(client, repository, theatre_id=THEATRE_ID)
+
+    await job.run(notifier)
+
+    assert notifier.sent == []
+    assert not await repository.is_notified(62291)
 
 
 @pytest.mark.asyncio

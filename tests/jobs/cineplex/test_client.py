@@ -17,12 +17,28 @@ MOVIES_BOOKABLE_SAMPLE = [
         "name": "Avengers: Doomsday",
         "filmUrl": "avengers-doomsday",
         "isEvent": False,
+        "genres": [],
     },
     {
         "id": 99999,
         "name": "National Theatre Live: Hamlet",
         "filmUrl": "ntl-hamlet",
         "isEvent": True,
+        "genres": [],
+    },
+    {
+        "id": 62291,
+        "name": "Ramayana (Hindi w/e.s.t.)",
+        "filmUrl": "est-ramayana-hindi-west",
+        "isEvent": False,
+        "genres": ["International"],
+    },
+    {
+        "id": 60710,
+        "name": "Godzilla Minus Zero (Japanese w/e.s.t.)",
+        "filmUrl": "godzilla-minus-zero-japanese-west",
+        "isEvent": False,
+        "genres": ["Action"],
     },
 ]
 
@@ -59,12 +75,18 @@ async def test_get_bookable_movies_parses_real_shape():
     client = CineplexClient(transport=httpx.MockTransport(handler), api_key="test-key")
     movies = await client.get_bookable_movies()
 
-    assert len(movies) == 2
+    assert len(movies) == 4
     assert movies[0].film_id == 34362
     assert movies[0].title == "Avengers: Doomsday"
     assert movies[0].slug == "avengers-doomsday"
     assert movies[0].is_event is False
+    assert movies[0].is_international is False
     assert movies[1].is_event is True
+
+    # "International" genre tag
+    assert movies[2].is_international is True
+    # no "International" genre tag, but the title's subtitle marker still catches it
+    assert movies[3].is_international is True
 
 
 @pytest.mark.asyncio
@@ -106,7 +128,7 @@ async def test_discovers_api_key_when_not_provided():
     movies = await client.get_bookable_movies()
 
     assert client._api_key == "d15c0ded0000000000000000000001aa"
-    assert len(movies) == 2
+    assert len(movies) == 4
 
 
 @pytest.mark.asyncio
@@ -131,7 +153,7 @@ async def test_401_rediscovers_key_and_retries_once():
     movies = await client.get_bookable_movies()
 
     assert calls_to_movies_endpoint == 2
-    assert len(movies) == 2
+    assert len(movies) == 4
 
 
 @pytest.mark.asyncio

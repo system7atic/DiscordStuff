@@ -20,6 +20,20 @@ APP_CHUNK_PATTERN = re.compile(
 )
 API_KEY_PATTERN = re.compile(r'"Ocp-Apim-Subscription-Key":"([a-f0-9]{32})"')
 
+# Cineplex marks subtitled/dubbed foreign-language releases with a trailing
+# parenthetical like "(Hindi w/e.s.t.)" or "(English Dubbed)" and/or an
+# "International" genre tag - but not consistently (e.g. "Godzilla Minus
+# Zero (Japanese w/e.s.t.)" has no "International" genre). Verified against
+# the live bookable-movies list on 2026-10-31: this combined check correctly
+# separated all 19 international titles from the other 87 bookable movies.
+INTERNATIONAL_TITLE_PATTERN = re.compile(r"\((?:[^)]*\be\.?\s*s\.?\s*t\.?\b[^)]*|[^)]*dubbed[^)]*)\)", re.IGNORECASE)
+
+
+def _is_international(movie: dict) -> bool:
+    return "International" in movie.get("genres", []) or bool(
+        INTERNATIONAL_TITLE_PATTERN.search(movie["name"])
+    )
+
 
 class CineplexAuthError(Exception):
     """Raised when the API still rejects requests after refreshing the subscription key."""
@@ -43,6 +57,7 @@ class CineplexClient:
                 title=movie["name"],
                 slug=movie["filmUrl"],
                 is_event=movie["isEvent"],
+                is_international=_is_international(movie),
             )
             for movie in data
         ]

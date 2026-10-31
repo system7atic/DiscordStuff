@@ -37,17 +37,20 @@ class CineplexJob:
             return
 
         for movie in movies:
-            if movie.is_event or await self._repository.is_notified(movie.film_id):
+            if self._is_excluded(movie) or await self._repository.is_notified(movie.film_id):
                 continue
             if await self._is_bookable_at_my_theatre(movie.film_id):
                 await self._notify_new_movie(notifier, movie)
 
     async def _seed(self, movies: list[BookableMovie]) -> None:
         for movie in movies:
-            if movie.is_event:
+            if self._is_excluded(movie):
                 continue
             if await self._is_bookable_at_my_theatre(movie.film_id):
                 await self._repository.mark_notified(movie.film_id, movie.title)
+
+    def _is_excluded(self, movie: BookableMovie) -> bool:
+        return movie.is_event or movie.is_international
 
     async def _is_bookable_at_my_theatre(self, film_id: int) -> bool:
         theatres = await self._client.get_theatres_for_film(film_id)

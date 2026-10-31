@@ -7,6 +7,7 @@ class BookableMovie:
     title: str
     slug: str
     is_event: bool
+    is_international: bool
 
 
 @dataclass(frozen=True)
