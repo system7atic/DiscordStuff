@@ -60,7 +60,7 @@ To deploy an update later: `git pull && make build-up`. To stop the stack: `make
 
 ## Cineplex job
 
-Polls Cineplex's unofficial JSON API hourly for movies that just went on sale (regular, advance, or coming-soon) at one specific theatre, and posts a Discord message for each. No config needed — see `src/discordstuff/jobs/cineplex/`:
+Tracks which movies become newly bookable (regular, advance, or coming-soon) at one specific theatre — that is, movies that weren't bookable there before but are now — and posts a Discord message for each. Polls Cineplex's unofficial JSON API hourly to check. No config needed — see `src/discordstuff/jobs/cineplex/`:
 
 - `location.py` — the one theatre this watches (SilverCity Riverport Cinemas, Richmond BC, `theatreId=1409`) and its location query params. Single-theatre use case, so this is a hardcoded constant rather than env config.
 - `client.py` — the API wrapper. The `Ocp-Apim-Subscription-Key` header is a public front-end key, not a per-user secret: Cineplex hardcodes it into their own Next.js app bundle, so the client fetches `cineplex.com`, finds the `_app-*.js` chunk, and regexes the key out of it — no manual DevTools copying needed. On a 401/403 it re-discovers the key once and retries automatically before giving up.
