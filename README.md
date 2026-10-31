@@ -42,9 +42,8 @@ cp .env.example .env
 # fill in .env, but set DATABASE_URL to the host-exposed port:
 #   DATABASE_URL=postgresql://discordstuff:discordstuff@localhost:5435/discordstuff
 
-docker compose up db -d          # Postgres only, exposed on localhost:5435
-pip install -e ".[dev]"
-python -m discordstuff.main      # run the app directly, reads .env via python-dotenv
+make dev-db   # Postgres only, exposed on localhost:5435
+make dev      # pip install -e ".[dev]", then run the app directly, reads .env via python-dotenv
 ```
 
 `localhost:5435` is also how you'd point pgAdmin (or any DB client) at this project's database — ports 5432–5434 were already taken by other local projects, hence 5435.
