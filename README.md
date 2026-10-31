@@ -54,10 +54,10 @@ python -m discordstuff.main      # run the app directly, reads .env via python-d
 ```bash
 cp .env.example .env
 # fill in .env — DATABASE_URL stays as the compose default (postgresql://discordstuff:discordstuff@db:5432/discordstuff)
-docker compose up --build -d
+make build-up
 ```
 
-To deploy an update later: `git pull && docker compose up -d --build`.
+To deploy an update later: `git pull && make build-up`. To stop the stack: `make down`.
 
 ## Cineplex job
 
