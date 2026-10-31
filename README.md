@@ -29,11 +29,11 @@ Adding a new Job means adding a new package under `jobs/` and registering it in 
 
 ## Running
 
-Two deployments of this project are expected: your own machine, pointed at a test Discord server, for development; and a friend's server, pointed at the real Discord server, for prod. Each is a fully independent stack — its own `.env`, its own `db_data` volume, its own bot token/channel.
+Two deployments of this project are expected: your own machine, pointed at a test Discord server, for development; and a separate server, pointed at the real Discord server, for prod. Each is a fully independent stack — its own `.env`, its own `db_data` volume, its own bot token/channel.
 
 `ENABLED_JOBS` in `.env` is a comma-separated list. Clear it (or remove `cineplex` from it) to turn a job off without touching code.
 
-### Dev (your machine)
+### Development
 
 Rebuilding the app's Docker image on every code change is slow, so for dev only run Postgres through Docker and run the app bare:
 
@@ -49,7 +49,7 @@ python -m discordstuff.main      # run the app directly, reads .env via python-d
 
 `localhost:5435` is also how you'd point pgAdmin (or any DB client) at this project's database — ports 5432–5434 were already taken by other local projects, hence 5435.
 
-### Prod (friend's server)
+### Prod
 
 ```bash
 cp .env.example .env
@@ -70,7 +70,7 @@ Polls Cineplex's unofficial JSON API hourly for movies that just went on sale (r
 
 Verified against the live API on 2026-10-31: response shapes for `/v1/movies/bookable`, `/v1/theatres`, `/v1/dates/bookable`; that plain server-side requests (no browser, no special headers beyond the subscription key) aren't blocked by Cineplex's Imperva/Incapsula bot protection from this network.
 
-This is personal-use-only automation against an undocumented, unofficial API whose terms of use prohibit automated access — keep polling to at most hourly with a handful of requests per run, and expect it to break without notice. If the friend's prod server's IP turns out to be blocked by Imperva (datacenter IPs are more likely to be flagged than residential ones), that's the one thing not yet verified — it can only be tested by actually running the job there.
+This is personal-use-only automation against an undocumented, unofficial API whose terms of use prohibit automated access — keep polling to at most hourly with a handful of requests per run, and expect it to break without notice. If the prod server's IP turns out to be blocked by Imperva (datacenter IPs are more likely to be flagged than residential ones), that's the one thing not yet verified — it can only be tested by actually running the job there.
 
 ## Development
 
