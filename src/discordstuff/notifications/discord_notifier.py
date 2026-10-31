@@ -40,7 +40,7 @@ class DiscordNotifier:
         self._alert_list = config.alert_list
         self._subscribers = subscribers
         self._ready = asyncio.Event()
-        self._client.event(self._on_ready)
+        self._client.event(self.on_ready)
         self._register_commands()
 
     def _register_commands(self) -> None:
@@ -75,7 +75,7 @@ class DiscordNotifier:
             await self.send(TEST_NOTIFICATION)
             await interaction.response.send_message("Sent a test notification.", ephemeral=True)
 
-    async def _on_ready(self) -> None:
+    async def on_ready(self) -> None:
         await self._tree.sync(guild=self._guild)
         logger.info("Discord notifier ready as %s", self._client.user)
         self._ready.set()
