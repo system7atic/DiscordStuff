@@ -5,6 +5,11 @@ class NotifiedMovieRepository:
     def __init__(self, pool: asyncpg.Pool):
         self._pool = pool
 
+    async def has_any(self) -> bool:
+        async with self._pool.acquire() as conn:
+            row = await conn.fetchrow("SELECT 1 FROM notified_movies LIMIT 1")
+            return row is not None
+
     async def is_notified(self, film_id: int) -> bool:
         async with self._pool.acquire() as conn:
             row = await conn.fetchrow(

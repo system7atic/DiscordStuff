@@ -59,25 +59,18 @@ docker compose up --build -d
 
 To deploy an update later: `git pull && docker compose up -d --build`.
 
-## Cineplex job setup
+## Cineplex job
 
-This job polls Cineplex's unofficial JSON API for movies that just went on sale (regular, advance, or coming-soon) at one specific theatre, and posts a Discord message for each.
+Polls Cineplex's unofficial JSON API hourly for movies that just went on sale (regular, advance, or coming-soon) at one specific theatre, and posts a Discord message for each. No config needed — see `src/discordstuff/jobs/cineplex/`:
 
-**Status: skeleton only.** `CineplexClient` and `CineplexJob` raise `NotImplementedError` — the actual response field names and whether server-side requests get past Cineplex's bot protection (Imperva/Incapsula) haven't been verified yet. See inline comments in `src/discordstuff/jobs/cineplex/client.py` and `job.py`.
+- `location.py` — the one theatre this watches (SilverCity Riverport Cinemas, Richmond BC, `theatreId=1409`) and its location query params. Single-theatre use case, so this is a hardcoded constant rather than env config.
+- `client.py` — the API wrapper. The `Ocp-Apim-Subscription-Key` header is a public front-end key, not a per-user secret: Cineplex hardcodes it into their own Next.js app bundle, so the client fetches `cineplex.com`, finds the `_app-*.js` chunk, and regexes the key out of it — no manual DevTools copying needed. On a 401/403 it re-discovers the key once and retries automatically before giving up.
+- `repository.py` — `notified_movies` persistence. A movie is marked notified only once it's confirmed bookable at the one watched theatre (not just bookable somewhere). First run seeds the table silently from whatever's already on sale there, so you don't get a flood of pings for things that were already available.
+- `job.py` — ties it together: skips special-event listings (`isEvent`), raises instead of silently continuing on an empty movie list or an API/parsing failure (the scheduler turns any raised exception into a Discord error alert automatically).
 
-Config needed in `.env`:
+Verified against the live API on 2026-10-31: response shapes for `/v1/movies/bookable`, `/v1/theatres`, `/v1/dates/bookable`; that plain server-side requests (no browser, no special headers beyond the subscription key) aren't blocked by Cineplex's Imperva/Incapsula bot protection from this network.
 
-- `CINEPLEX_API_KEY` — the `Ocp-Apim-Subscription-Key` header value. It's a public front-end key, not a per-user secret: open cineplex.com in Chrome, open DevTools → Network, click any `apis.cineplex.com` request, and copy the header from Request Headers. If the job starts erroring with 401/403, this key was likely rotated — grab a fresh one.
-- `CINEPLEX_THEATRE_ID` — the theatre to watch. Not yet known; find it via the `/v1/theatres` endpoint once the client is implemented.
-- `CINEPLEX_CITY`, `CINEPLEX_REGION`, `CINEPLEX_REGION_CODE`, `CINEPLEX_POSTAL_CODE`, `CINEPLEX_LATITUDE`, `CINEPLEX_LONGITUDE` — location query params the site sends; set these to match your theatre's area.
-
-Known endpoints (base `https://apis.cineplex.com/prod/cpx/theatrical/api`):
-
-- `GET /v1/movies/bookable?language=en` — all movies currently purchasable anywhere.
-- `GET /v1/theatres?language=en&filmId={id}&...location...` — theatres near a location selling a given film.
-- `GET /v1/dates/bookable?filmId={id}` — dates with tickets on sale for a film.
-
-This is personal-use-only automation against an undocumented, unofficial API whose terms of use prohibit automated access — keep polling to at most hourly with a handful of requests per run, and expect it to break without notice.
+This is personal-use-only automation against an undocumented, unofficial API whose terms of use prohibit automated access — keep polling to at most hourly with a handful of requests per run, and expect it to break without notice. If the friend's prod server's IP turns out to be blocked by Imperva (datacenter IPs are more likely to be flagged than residential ones), that's the one thing not yet verified — it can only be tested by actually running the job there.
 
 ## Development
 

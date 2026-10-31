@@ -9,12 +9,10 @@ def test_from_env_requires_discord_bot_token(monkeypatch):
         Config.from_env()
 
 
-def test_from_env_requires_cineplex_api_key_when_job_enabled(monkeypatch):
+def test_from_env_requires_database_url(monkeypatch):
     monkeypatch.setenv("DISCORD_BOT_TOKEN", "token")
     monkeypatch.setenv("DISCORD_CHANNEL_ID", "123")
-    monkeypatch.setenv("DATABASE_URL", "postgresql://x")
-    monkeypatch.setenv("ENABLED_JOBS", "cineplex")
-    monkeypatch.delenv("CINEPLEX_API_KEY", raising=False)
+    monkeypatch.delenv("DATABASE_URL", raising=False)
 
-    with pytest.raises(ValueError, match="CINEPLEX_API_KEY"):
+    with pytest.raises(ValueError, match="DATABASE_URL"):
         Config.from_env()

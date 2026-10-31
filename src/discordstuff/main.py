@@ -19,9 +19,9 @@ logging.basicConfig(level=logging.INFO)
 def build_jobs(config: Config, pool: asyncpg.Pool) -> list[Job]:
     jobs: list[Job] = []
     if "cineplex" in config.enabled_jobs:
-        client = CineplexClient(config)
+        client = CineplexClient()
         repository = NotifiedMovieRepository(pool)
-        jobs.append(CineplexJob(client, repository, config.cineplex_theatre_id))
+        jobs.append(CineplexJob(client, repository))
     return jobs
 
 

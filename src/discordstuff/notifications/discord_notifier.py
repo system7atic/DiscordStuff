@@ -40,6 +40,11 @@ class DiscordNotifier:
     ) -> None:
         await self._ready.wait()
         channel = self._client.get_channel(channel_id) or await self._client.fetch_channel(channel_id)
+        if not isinstance(channel, discord.abc.Messageable):
+            raise TypeError(
+                f"Discord channel {channel_id} is a {type(channel).__name__}, which can't "
+                "receive messages - configure a text channel ID instead."
+            )
         embed = discord.Embed(
             title=notification.title,
             description=notification.body,
