@@ -1,0 +1,8 @@
+.env
+CONTEXT.md
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+*.egg-info/
+.ruff_cache/
