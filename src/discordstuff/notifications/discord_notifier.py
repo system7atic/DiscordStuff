@@ -14,6 +14,12 @@ logger = logging.getLogger(__name__)
 
 NORMAL_COLOR = discord.Color.blue()
 
+TEST_NOTIFICATION = Notification(
+    title="Test Movie is now bookable at your theatre",
+    body="First bookable date: 2026-11-01",
+    url="https://www.cineplex.com/movie/test-movie",
+)
+
 
 def _build_mention_prefix(subscriber_ids: list[int]) -> str:
     return " ".join(f"<@{user_id}>" for user_id in subscriber_ids)
@@ -59,6 +65,15 @@ class DiscordNotifier:
             await interaction.response.send_message(
                 "You're unsubscribed from bookable-movie alerts.", ephemeral=True
             )
+
+        @self._tree.command(
+            name="test-bookable-movies",
+            description="Send a demo bookable-movie notification, pinging all current subscribers",
+            guild=self._guild,
+        )
+        async def test_bookable_movies(interaction: discord.Interaction) -> None:
+            await self.send(TEST_NOTIFICATION)
+            await interaction.response.send_message("Sent a test notification.", ephemeral=True)
 
     async def _on_ready(self) -> None:
         await self._tree.sync(guild=self._guild)
