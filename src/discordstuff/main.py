@@ -2,6 +2,7 @@ import asyncio
 import logging
 
 import asyncpg
+from dotenv import load_dotenv
 
 from discordstuff.config import Config
 from discordstuff.db.connection import create_pool, run_migrations
@@ -25,6 +26,7 @@ def build_jobs(config: Config, pool: asyncpg.Pool) -> list[Job]:
 
 
 async def main() -> None:
+    load_dotenv()
     config = Config.from_env()
     pool = await create_pool(config.database_url)
     await run_migrations(pool)

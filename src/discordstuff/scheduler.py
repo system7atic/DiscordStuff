@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 from discordstuff.jobs.base import Job
-from discordstuff.notifications.base import Notifier
+from discordstuff.notifications.base import Notification, Notifier
 
 logger = logging.getLogger(__name__)
 
@@ -24,4 +24,6 @@ class JobScheduler:
             await job.run(self._notifier)
         except Exception as exc:
             logger.exception("Job '%s' failed", job.name)
-            await self._notifier.send_error(f"Job '{job.name}' failed: {exc}")
+            await self._notifier.send_error(
+                Notification(title=f"Job '{job.name}' failed", body=str(exc))
+            )

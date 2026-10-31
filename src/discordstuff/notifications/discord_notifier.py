@@ -4,8 +4,12 @@ import logging
 import discord
 
 from discordstuff.config import Config
+from discordstuff.notifications.base import Notification
 
 logger = logging.getLogger(__name__)
+
+NORMAL_COLOR = discord.Color.blue()
+ERROR_COLOR = discord.Color.red()
 
 
 class DiscordNotifier:
@@ -25,13 +29,21 @@ class DiscordNotifier:
     async def start(self) -> None:
         await self._client.start(self._token)
 
-    async def send(self, message: str) -> None:
-        await self._send_to_channel(self._channel_id, message)
+    async def send(self, notification: Notification) -> None:
+        await self._send_to_channel(self._channel_id, notification, NORMAL_COLOR)
 
-    async def send_error(self, message: str) -> None:
-        await self._send_to_channel(self._error_channel_id, f":warning: {message}")
+    async def send_error(self, notification: Notification) -> None:
+        await self._send_to_channel(self._error_channel_id, notification, ERROR_COLOR)
 
-    async def _send_to_channel(self, channel_id: int, message: str) -> None:
+    async def _send_to_channel(
+        self, channel_id: int, notification: Notification, color: discord.Color
+    ) -> None:
         await self._ready.wait()
         channel = self._client.get_channel(channel_id) or await self._client.fetch_channel(channel_id)
-        await channel.send(message)
+        embed = discord.Embed(
+            title=notification.title,
+            description=notification.body,
+            url=notification.url,
+            color=color,
+        )
+        await channel.send(embed=embed)

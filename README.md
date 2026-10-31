@@ -29,13 +29,35 @@ Adding a new Job means adding a new package under `jobs/` and registering it in 
 
 ## Running
 
+Two deployments of this project are expected: your own machine, pointed at a test Discord server, for development; and a friend's server, pointed at the real Discord server, for prod. Each is a fully independent stack — its own `.env`, its own `db_data` volume, its own bot token/channel.
+
+`ENABLED_JOBS` in `.env` is a comma-separated list. Clear it (or remove `cineplex` from it) to turn a job off without touching code.
+
+### Dev (your machine)
+
+Rebuilding the app's Docker image on every code change is slow, so for dev only run Postgres through Docker and run the app bare:
+
 ```bash
 cp .env.example .env
-# fill in .env — see "Cineplex job setup" below for that section
+# fill in .env, but set DATABASE_URL to the host-exposed port:
+#   DATABASE_URL=postgresql://discordstuff:discordstuff@localhost:5435/discordstuff
+
+docker compose up db -d          # Postgres only, exposed on localhost:5435
+pip install -e ".[dev]"
+python -m discordstuff.main      # run the app directly, reads .env via python-dotenv
+```
+
+`localhost:5435` is also how you'd point pgAdmin (or any DB client) at this project's database — ports 5432–5434 were already taken by other local projects, hence 5435.
+
+### Prod (friend's server)
+
+```bash
+cp .env.example .env
+# fill in .env — DATABASE_URL stays as the compose default (postgresql://discordstuff:discordstuff@db:5432/discordstuff)
 docker compose up --build -d
 ```
 
-`ENABLED_JOBS` in `.env` is a comma-separated list. Clear it (or remove `cineplex` from it) to turn a job off without touching code.
+To deploy an update later: `git pull && docker compose up -d --build`.
 
 ## Cineplex job setup
 

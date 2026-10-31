@@ -1,7 +1,15 @@
+from dataclasses import dataclass
 from typing import Protocol
 
 
-class Notifier(Protocol):
-    async def send(self, message: str) -> None: ...
+@dataclass(frozen=True)
+class Notification:
+    title: str
+    body: str
+    url: str | None = None
 
-    async def send_error(self, message: str) -> None: ...
+
+class Notifier(Protocol):
+    async def send(self, notification: Notification) -> None: ...
+
+    async def send_error(self, notification: Notification) -> None: ...

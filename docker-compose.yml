@@ -5,6 +5,8 @@ services:
       POSTGRES_USER: discordstuff
       POSTGRES_PASSWORD: discordstuff
       POSTGRES_DB: discordstuff
+    ports:
+      - "127.0.0.1:5435:5432"
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
