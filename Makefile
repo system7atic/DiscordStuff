@@ -1,9 +1,13 @@
-.PHONY: build-up down dev-db dev push
+.PHONY: build-up pull-up down dev-db dev push
 
 IMAGE := ghcr.io/system7atic/discordstuff:latest
 
 build-up:
 	docker compose up --build -d
+
+pull-up:
+	docker compose pull app
+	docker compose up -d
 
 down:
 	docker compose down

@@ -17,6 +17,7 @@ services:
     restart: unless-stopped
 
   app:
+    image: ghcr.io/system7atic/discordstuff:latest
     build: .
     env_file: .env
     depends_on:

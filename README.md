@@ -50,13 +50,17 @@ make dev      # pip install -e ".[dev]", then run the app directly, reads .env v
 
 ### Prod
 
+The prod server pulls the prebuilt image from GHCR instead of building from source, so it only needs `docker-compose.yml` and `.env` (no git clone required):
+
 ```bash
 cp .env.example .env
 # fill in .env — DATABASE_URL stays as the compose default (postgresql://discordstuff:discordstuff@db:5432/discordstuff)
-make build-up
+make pull-up
 ```
 
-To deploy an update later: `git pull && make build-up`. To stop the stack: `make down`.
+To publish a new image after a code change (from your dev machine): `make push`. To deploy that update on the prod server: `make pull-up`. To stop the stack: `make down`.
+
+`make build-up` still works for building the image from local source directly on a host — useful if you don't want to go through GHCR.
 
 ## Cineplex job
 
