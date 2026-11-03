@@ -157,6 +157,7 @@ class DiscordNotifier:
         self._channel_id = config.discord_channel_id
         self._guild = discord.Object(id=config.discord_guild_id)
         self._alert_list = config.alert_list
+        self._is_dev = config.is_dev
         self._subscribers = subscribers
         self._ready = asyncio.Event()
         self._client.event(self.on_ready)
@@ -213,6 +214,10 @@ class DiscordNotifier:
                 f"You're subscribed to:\n{lines}", ephemeral=True
             )
 
+        if self._is_dev:
+            self._register_test_command()
+
+    def _register_test_command(self) -> None:
         @self._tree.command(
             name="test-bookable-movies",
             description="Preview the bookable-movie alert layout with fabricated sample data",

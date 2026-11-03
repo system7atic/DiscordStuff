@@ -51,3 +51,31 @@ def test_from_env_defaults_alert_list_to_empty(monkeypatch):
     config = Config.from_env()
 
     assert config.alert_list == frozenset()
+
+
+def _set_required_env(monkeypatch) -> None:
+    monkeypatch.setenv("DISCORD_BOT_TOKEN", "token")
+    monkeypatch.setenv("DISCORD_CHANNEL_ID", "123")
+    monkeypatch.setenv("DISCORD_GUILD_ID", "456")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://localhost/db")
+
+
+def test_from_env_defaults_is_dev_to_false(monkeypatch):
+    _set_required_env(monkeypatch)
+    monkeypatch.delenv("APP_ENV", raising=False)
+
+    assert Config.from_env().is_dev is False
+
+
+def test_from_env_is_dev_true_when_app_env_is_dev(monkeypatch):
+    _set_required_env(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "DEV")
+
+    assert Config.from_env().is_dev is True
+
+
+def test_from_env_is_dev_false_for_prod(monkeypatch):
+    _set_required_env(monkeypatch)
+    monkeypatch.setenv("APP_ENV", "prod")
+
+    assert Config.from_env().is_dev is False

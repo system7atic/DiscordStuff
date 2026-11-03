@@ -11,6 +11,7 @@ class Config:
     enabled_jobs: frozenset[str]
     job_interval_seconds: int
     alert_list: frozenset[int]
+    is_dev: bool
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -22,6 +23,9 @@ class Config:
             enabled_jobs=_parse_enabled_jobs(os.environ.get("ENABLED_JOBS", "")),
             job_interval_seconds=int(os.environ.get("JOB_INTERVAL_SECONDS", "3600")),
             alert_list=_parse_alert_list(os.environ.get("ALERT_LIST", "")),
+            # Defaults to prod so a missing APP_ENV never accidentally exposes
+            # dev-only commands (like /test-bookable-movies) on the real bot.
+            is_dev=os.environ.get("APP_ENV", "prod").strip().lower() == "dev",
         )
 
 

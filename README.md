@@ -33,6 +33,8 @@ Two deployments of this project are expected: your own machine, pointed at a tes
 
 `ENABLED_JOBS` in `.env` is a comma-separated list. Clear it (or remove `cineplex` from it) to turn a job off without touching code.
 
+`APP_ENV` in `.env` should be `dev` or `prod` (defaults to `prod` if unset). Dev-only slash commands like `/test-bookable-movies` are only registered when it's `dev`, so they never show up on the real bot.
+
 ### Development
 
 Rebuilding the app's Docker image on every code change is slow, so for dev only run Postgres through Docker and run the app bare:
