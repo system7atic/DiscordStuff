@@ -1,6 +1,3 @@
-THEATRE_ID = 1409
-THEATRE_NAME = "SilverCity Riverport Cinemas"
-
 LOCATION_PARAMS = {
     "city": "Richmond",
     "region": "British Columbia",

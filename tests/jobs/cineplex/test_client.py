@@ -18,6 +18,7 @@ MOVIES_BOOKABLE_SAMPLE = [
         "filmUrl": "avengers-doomsday",
         "isEvent": False,
         "genres": [],
+        "mediumPosterImageUrl": "https://mediafiles.cineplex.com/Central/Film/Posters/34362_320_470.jpg",
     },
     {
         "id": 99999,
@@ -25,6 +26,7 @@ MOVIES_BOOKABLE_SAMPLE = [
         "filmUrl": "ntl-hamlet",
         "isEvent": True,
         "genres": [],
+        "mediumPosterImageUrl": "https://mediafiles.cineplex.com/Central/Film/Posters/99999_320_470.jpg",
     },
     {
         "id": 62291,
@@ -32,6 +34,7 @@ MOVIES_BOOKABLE_SAMPLE = [
         "filmUrl": "est-ramayana-hindi-west",
         "isEvent": False,
         "genres": ["International"],
+        "mediumPosterImageUrl": "https://mediafiles.cineplex.com/Central/Film/Posters/62291_320_470.jpg",
     },
     {
         "id": 60710,
@@ -39,6 +42,7 @@ MOVIES_BOOKABLE_SAMPLE = [
         "filmUrl": "godzilla-minus-zero-japanese-west",
         "isEvent": False,
         "genres": ["Action"],
+        "mediumPosterImageUrl": "https://mediafiles.cineplex.com/Central/Film/Posters/60710_320_470.jpg",
     },
     {
         "id": 62163,
@@ -46,6 +50,7 @@ MOVIES_BOOKABLE_SAMPLE = [
         "filmUrl": "once-upon-a-time-in-the-middle-east-mandarin-wchinese-and-est",
         "isEvent": False,
         "genres": ["International", "Drama"],
+        "mediumPosterImageUrl": "https://mediafiles.cineplex.com/Central/Film/Posters/62163_320_470.jpg",
     },
 ]
 
@@ -88,6 +93,7 @@ async def test_get_bookable_movies_parses_real_shape():
     assert movies[0].slug == "avengers-doomsday"
     assert movies[0].is_event is False
     assert movies[0].is_international is False
+    assert movies[0].poster_url == "https://mediafiles.cineplex.com/Central/Film/Posters/34362_320_470.jpg"
     assert movies[1].is_event is True
 
     # "International" genre tag, not an exempt language -> excluded

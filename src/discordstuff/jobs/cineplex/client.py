@@ -67,6 +67,7 @@ class CineplexClient:
                 slug=movie["filmUrl"],
                 is_event=movie["isEvent"],
                 is_international=_is_international(movie),
+                poster_url=movie["mediumPosterImageUrl"],
             )
             for movie in data
         ]

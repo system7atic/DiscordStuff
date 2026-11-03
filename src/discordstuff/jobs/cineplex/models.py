@@ -8,6 +8,7 @@ class BookableMovie:
     slug: str
     is_event: bool
     is_international: bool
+    poster_url: str
 
 
 @dataclass(frozen=True)
