@@ -19,9 +19,14 @@ class DiscordClient:
         self.tree = app_commands.CommandTree(self.client)
         self.guild = discord.Object(id=guild_id)
         self.ready = asyncio.Event()
-        self.client.event(self.on_ready)
+        # Assigned explicitly (not via `.event()`) so the required name on
+        # discord.Client - `on_ready` - is a literal here, not inferred from
+        # this method's own name. `.event()` relies on `coro.__name__`
+        # matching a known event name with no validation; a rename of this
+        # method alone silently broke that twice.
+        self.client.on_ready = self._handle_ready
 
-    async def on_ready(self) -> None:
+    async def _handle_ready(self) -> None:
         await self.tree.sync(guild=self.guild)
         logger.info("Discord notifier ready as %s", self.client.user)
         self.ready.set()

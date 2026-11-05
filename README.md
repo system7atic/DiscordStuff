@@ -76,17 +76,7 @@ To publish a new image after a code change (from your dev machine): `make push`.
 
 ## Cineplex job
 
-Tracks which movies become newly bookable (regular, advance, or coming-soon) at a fixed set of watched theatres — that is, movies that weren't bookable there before but are now — and posts a Discord message for each. Polls Cineplex's unofficial JSON API hourly to check. No config needed — see `src/discordstuff/jobs/cineplex/`:
-
-- `theatres.py` — the fixed list of theatres this watches (SilverCity Riverport Cinemas/Richmond `theatreId=1409`, Cineplex Cinemas Metropolis `theatreId=1408`, Cineplex Cinemas Coquitlam and VIP `theatreId=1412`), each with a short `key` used as the slash-command choice value. Small, static set, so this is a hardcoded registry rather than env config.
-- `location.py` — the location query params used to anchor the `/v1/theatres` search; the API returns a nationwide theatre list regardless, so this doesn't need to match any one watched theatre.
-- `client.py` — the API wrapper. The `Ocp-Apim-Subscription-Key` header is a public front-end key, not a per-user secret: Cineplex hardcodes it into their own Next.js app bundle, so the client fetches `cineplex.com`, finds the `_app-*.js` chunk, and regexes the key out of it — no manual DevTools copying needed. On a 401/403 it re-discovers the key once and retries automatically before giving up.
-- `repository.py` — `notified_movies` persistence, keyed by `(film_id, theatre_id)`. A movie is marked notified at a theatre only once it's confirmed bookable there (not just bookable somewhere). Each watched theatre seeds independently the first time it has zero rows, so adding a new theatre to `theatres.py` doesn't flood its subscribers with a backlog of "new" movies that were already on sale there.
-- `job.py` — ties it together: skips special-event listings (`isEvent`) and international/subtitled releases (`is_international` — detected via the `"International"` genre tag and/or a title pattern like `"(Hindi w/e.s.t.)"`, verified against all 106 currently-bookable titles on 2026-10-31 with zero false positives/negatives), raises instead of silently continuing on an empty movie list or an API/parsing failure (the scheduler turns any raised exception into a Discord error alert automatically). Hands any newly-bookable movies off to the notifier grouped by theatre; `notifications/bookable_movies.py` then groups theatres by their exact subscriber set so one message covers every theatre a given audience shares, instead of one message per theatre.
-
-Verified against the live API on 2026-10-31: response shapes for `/v1/movies/bookable`, `/v1/theatres`, `/v1/dates/bookable`; that plain server-side requests (no browser, no special headers beyond the subscription key) aren't blocked by Cineplex's Imperva/Incapsula bot protection from this network.
-
-This is personal-use-only automation against an undocumented, unofficial API whose terms of use prohibit automated access — keep polling to at most hourly with a handful of requests per run, and expect it to break without notice. If the prod server's IP turns out to be blocked by Imperva (datacenter IPs are more likely to be flagged than residential ones), that's the one thing not yet verified — it can only be tested by actually running the job there.
+Tracks which movies become newly bookable at a fixed, small set of watched theatres and posts a Discord message for each one. Runs hourly, filtering out special-event listings and international/subtitled releases so subscribers only hear about things they'd actually want to book. Needs no configuration — the watched theatres, exclusion rules, and notified-movie tracking all live under `src/discordstuff/jobs/cineplex/`.
 
 ## Development
 
