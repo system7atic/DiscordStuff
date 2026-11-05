@@ -13,13 +13,23 @@ src/discordstuff/
 ├── scheduler.py          # generic JobScheduler — runs enabled jobs on an interval
 ├── notifications/
 │   ├── base.py           # Notifier protocol (the "black box")
-│   └── discord_notifier.py
+│   └── discord/
+│       ├── client.py     # barebones discord.Client + command tree wrapper
+│       ├── builder.py    # builds a client and registers commands onto it
+│       ├── commands.py   # slash command definitions
+│       ├── constants.py  # fabricated sample data for /test-bookable-movies
+│       ├── messages.py   # mention/embed/layout rendering
+│       └── notifier.py   # DiscordNotifier
 ├── jobs/
 │   ├── base.py           # Job protocol
 │   └── cineplex/         # first Job: Cineplex ticket-availability alerts
-│       ├── client.py     # Cineplex API wrapper
-│       ├── repository.py # notified_movies persistence
+│       ├── client.py          # Cineplex API wrapper
+│       ├── repository.py      # notified_movies persistence
+│       ├── bookable_movies.py # movie/batch domain types + grouping logic
 │       └── job.py
+├── repository/
+│   └── cineplex/
+│       └── bookable_movie_subscribers.py # bookable_movie_subscribers persistence
 └── db/
     ├── connection.py      # asyncpg pool + migration runner
     └── migrations/

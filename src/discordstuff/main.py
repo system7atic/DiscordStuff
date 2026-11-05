@@ -10,10 +10,10 @@ from discordstuff.jobs.base import Job
 from discordstuff.jobs.cineplex.client import CineplexClient
 from discordstuff.jobs.cineplex.job import CineplexJob
 from discordstuff.jobs.cineplex.repository import NotifiedMovieRepository
-from discordstuff.notifications.bookable_movie_subscribers import (
+from discordstuff.notifications.discord.notifier import DiscordNotifier
+from discordstuff.repository.cineplex.bookable_movie_subscribers import (
     BookableMovieSubscriberRepository,
 )
-from discordstuff.notifications.discord_notifier import DiscordNotifier
 from discordstuff.scheduler import JobScheduler
 
 logging.basicConfig(level=logging.INFO)
@@ -37,7 +37,9 @@ async def main() -> None:
     subscribers = BookableMovieSubscriberRepository(pool)
     notifier = DiscordNotifier(config, subscribers)
     jobs = build_jobs(config, pool)
-    scheduler = JobScheduler(jobs=jobs, notifier=notifier, interval_seconds=config.job_interval_seconds)
+    scheduler = JobScheduler(
+        jobs=jobs, notifier=notifier, interval_seconds=config.job_interval_seconds
+    )
 
     await asyncio.gather(
         notifier.start(),

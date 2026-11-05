@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
+    from discordstuff.jobs.cineplex.bookable_movies import MovieBookingInfo
     from discordstuff.jobs.cineplex.theatres import WatchedTheatre
-    from discordstuff.notifications.bookable_movies import MovieBookingInfo
 
 
 @dataclass(frozen=True)

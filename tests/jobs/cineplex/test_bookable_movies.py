@@ -1,9 +1,11 @@
 from discordstuff.jobs.cineplex.theatres import WatchedTheatre
-from discordstuff.notifications.bookable_movies import MovieBookingInfo, build_batches
+from discordstuff.jobs.cineplex.bookable_movies import MovieBookingInfo, build_batches
 
 RICHMOND = WatchedTheatre(key="richmond", theatre_id=1409, name="SilverCity Riverport Cinemas")
 METROPOLIS = WatchedTheatre(key="metropolis", theatre_id=1408, name="Cineplex Cinemas Metropolis")
-COQUITLAM = WatchedTheatre(key="coquitlam", theatre_id=1412, name="Cineplex Cinemas Coquitlam and VIP")
+COQUITLAM = WatchedTheatre(
+    key="coquitlam", theatre_id=1412, name="Cineplex Cinemas Coquitlam and VIP"
+)
 
 AVENGERS = MovieBookingInfo(
     title="Avengers: Doomsday",

@@ -1,18 +1,18 @@
 import discord
 
-from discordstuff.jobs.cineplex.theatres import WatchedTheatre
-from discordstuff.notifications.base import Notification
-from discordstuff.notifications.bookable_movies import (
+from discordstuff.jobs.cineplex.bookable_movies import (
     BookableMoviesBatch,
     MovieBookingInfo,
     TheatreSection,
 )
-from discordstuff.notifications.discord_notifier import (
-    _build_batch_messages,
-    _build_failure_message,
-    _build_mention_prefix,
-    _build_message_content,
-    _build_theatre_layouts,
+from discordstuff.jobs.cineplex.theatres import WatchedTheatre
+from discordstuff.notifications.base import Notification
+from discordstuff.notifications.discord.messages import (
+    build_batch_messages,
+    build_failure_message,
+    build_mention_prefix,
+    build_message_content,
+    build_theatre_layouts,
 )
 
 RICHMOND = WatchedTheatre(key="richmond", theatre_id=1409, name="SilverCity Riverport Cinemas")
@@ -34,25 +34,25 @@ def _make_movies(count: int, prefix: str) -> list[MovieBookingInfo]:
 
 
 def test_build_mention_prefix_joins_subscriber_mentions():
-    assert _build_mention_prefix([111, 222, 333]) == "<@111> <@222> <@333>"
+    assert build_mention_prefix([111, 222, 333]) == "<@111> <@222> <@333>"
 
 
 def test_build_mention_prefix_empty_when_no_subscribers():
-    assert _build_mention_prefix([]) == ""
+    assert build_mention_prefix([]) == ""
 
 
 def test_build_message_content_combines_mentions_and_header():
-    assert _build_message_content([111, 222]) == f"<@111> <@222> {HEADER_TEXT}"
+    assert build_message_content([111, 222]) == f"<@111> <@222> {HEADER_TEXT}"
 
 
 def test_build_message_content_is_just_the_header_without_subscribers():
-    assert _build_message_content([]) == HEADER_TEXT
+    assert build_message_content([]) == HEADER_TEXT
 
 
 def test_build_failure_message_combines_title_and_body():
     notification = Notification(title="Job 'cineplex' failed", body="boom")
 
-    assert _build_failure_message(notification) == "Job 'cineplex' failed: boom"
+    assert build_failure_message(notification) == "Job 'cineplex' failed: boom"
 
 
 def test_theatre_layout_combines_theatres_into_one_card_when_everything_fits():
@@ -90,7 +90,7 @@ def test_theatre_layout_combines_theatres_into_one_card_when_everything_fits():
         ],
     )
 
-    [view] = _build_theatre_layouts(batch)
+    [view] = build_theatre_layouts(batch)
 
     [container] = view.children
     assert isinstance(container, discord.ui.Container)
@@ -108,7 +108,10 @@ def test_theatre_layout_combines_theatres_into_one_card_when_everything_fits():
     assert isinstance(separator, discord.ui.Separator)
     assert metropolis_heading.content == "**Metropolis: Cineplex Cinemas Metropolis**"
 
-    assert avengers.children[0].content == "[Avengers: Doomsday](https://www.cineplex.com/movie/avengers)"
+    assert (
+        avengers.children[0].content
+        == "[Avengers: Doomsday](https://www.cineplex.com/movie/avengers)"
+    )
     assert avengers.children[1].content == "Bookable from Dec 17, 2026"
     assert avengers.accessory.media.url == "https://example.com/avengers.jpg"
     assert zootopia.accessory.media.url == "https://example.com/zootopia.jpg"
@@ -127,7 +130,7 @@ def test_theatre_layout_splits_into_one_card_per_theatre_when_combined_would_ove
         ],
     )
 
-    views = _build_theatre_layouts(batch)
+    views = build_theatre_layouts(batch)
 
     assert len(views) == 2
     [richmond_container] = views[0].children
@@ -151,7 +154,7 @@ def test_theatre_layout_splits_into_multiple_messages_past_the_40_component_cap(
         sections=[TheatreSection(theatre=RICHMOND, movies=_make_movies(10, "movie"))],
     )
 
-    views = _build_theatre_layouts(batch)
+    views = build_theatre_layouts(batch)
 
     assert len(views) == 2
     [first_container] = views[0].children
@@ -166,7 +169,7 @@ def test_theatre_layout_splits_into_multiple_messages_past_the_40_component_cap(
 def test_build_batch_messages_combines_mentions_and_header_in_one_content_message():
     batch = BookableMoviesBatch(subscriber_ids=[111, 222], sections=[])
 
-    messages = _build_batch_messages(batch)
+    messages = build_batch_messages(batch)
 
     assert len(messages) == 2
     assert messages[0] == {"content": f"<@111> <@222> {HEADER_TEXT}"}
@@ -176,7 +179,7 @@ def test_build_batch_messages_combines_mentions_and_header_in_one_content_messag
 def test_build_batch_messages_content_is_just_the_header_when_no_subscribers():
     batch = BookableMoviesBatch(subscriber_ids=[], sections=[])
 
-    messages = _build_batch_messages(batch)
+    messages = build_batch_messages(batch)
 
     assert len(messages) == 2
     assert messages[0] == {"content": HEADER_TEXT}

@@ -41,7 +41,8 @@ def build_batches(
         BookableMoviesBatch(
             subscriber_ids=sorted(subscriber_set),
             sections=[
-                TheatreSection(theatre=theatre, movies=theatre_movies[theatre]) for theatre in theatres
+                TheatreSection(theatre=theatre, movies=theatre_movies[theatre])
+                for theatre in theatres
             ],
         )
         for subscriber_set, theatres in theatre_ids_by_subscriber_set.items()
