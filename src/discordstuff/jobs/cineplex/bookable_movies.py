@@ -86,9 +86,15 @@ async def list_bookable_at(
         )
 
     movies = await client.get_bookable_movies()
-    results = await asyncio.gather(
-        *(listing_if_at_theatre(movie) for movie in movies if not movie.is_excluded)
-    )
+    # A TaskGroup, not gather, so one failure cancels the remaining requests
+    # rather than leaving them hitting an API that may already be blocking us.
+    async with asyncio.TaskGroup() as group:
+        tasks = [
+            group.create_task(listing_if_at_theatre(movie))
+            for movie in movies
+            if not movie.is_excluded
+        ]
+    results = [task.result() for task in tasks]
     return sorted(
         (listing for listing in results if listing is not None),
         key=lambda listing: (

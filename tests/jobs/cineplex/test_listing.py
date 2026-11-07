@@ -148,5 +148,29 @@ async def test_a_failed_cineplex_request_fails_the_whole_listing():
 
     client = FailingDatesClient([_movie(1, "Zootopia 2", "zootopia-2")], {1: [RICHMOND.theatre_id]})
 
-    with pytest.raises(RuntimeError, match="Cineplex is down"):
+    with pytest.raises(ExceptionGroup) as failure:
         await list_bookable_at(client, RICHMOND)
+
+    assert failure.group_contains(RuntimeError, match="Cineplex is down")
+
+
+@pytest.mark.asyncio
+async def test_a_failed_cineplex_request_stops_the_remaining_requests():
+    class FailsOnFirstLookupClient(FakeClient):
+        lookups_started = 0
+
+        async def get_theatres_for_film(self, film_id):
+            type(self).lookups_started += 1
+            await asyncio.sleep(0)
+            if film_id == 0:
+                raise RuntimeError("Cineplex is down")
+            return await super().get_theatres_for_film(film_id)
+
+    movies = [_movie(film_id, f"Movie {film_id}", f"movie-{film_id}") for film_id in range(20)]
+    client = FailsOnFirstLookupClient(movies)
+
+    with pytest.raises(ExceptionGroup):
+        await list_bookable_at(client, RICHMOND)
+    await asyncio.sleep(0.01)  # anything left running would start its lookup here
+
+    assert FailsOnFirstLookupClient.lookups_started < 20
