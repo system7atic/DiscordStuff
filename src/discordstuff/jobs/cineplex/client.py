@@ -4,7 +4,6 @@ from typing import Any
 
 import httpx
 
-from discordstuff.jobs.cineplex.location import LOCATION_PARAMS
 from discordstuff.jobs.cineplex.models import BookableMovie, Theatre
 
 BASE_URL = "https://apis.cineplex.com/prod/cpx/theatrical/api"
@@ -73,8 +72,7 @@ class CineplexClient:
         ]
 
     async def get_theatres_for_film(self, film_id: int) -> list[Theatre]:
-        params = {"language": "en", "filmId": film_id, **LOCATION_PARAMS}
-        data = await self._get_json("/v1/theatres", params)
+        data = await self._get_json("/v1/theatres", {"language": "en", "filmId": film_id})
         all_theatres = [
             *data["favouriteTheatres"],
             *data["nearbyTheatres"],
