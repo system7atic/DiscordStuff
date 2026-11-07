@@ -4,9 +4,9 @@ from datetime import date
 from discordstuff.jobs.cineplex.bookable_movies import MovieBookingInfo
 from discordstuff.jobs.cineplex.client import CineplexClient
 from discordstuff.jobs.cineplex.models import BookableMovie
-from discordstuff.jobs.cineplex.repository import NotifiedMovieRepository
 from discordstuff.jobs.cineplex.theatres import WATCHED_THEATRES, WatchedTheatre
 from discordstuff.notifications.base import Notifier
+from discordstuff.repository.cineplex.notified_movies import NotifiedMovieRepository
 
 logger = logging.getLogger(__name__)
 

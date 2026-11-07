@@ -24,12 +24,12 @@ src/discordstuff/
 │   ├── base.py           # Job protocol
 │   └── cineplex/         # first Job: Cineplex ticket-availability alerts
 │       ├── client.py          # Cineplex API wrapper
-│       ├── repository.py      # notified_movies persistence
 │       ├── bookable_movies.py # movie/batch domain types + grouping logic
 │       └── job.py
 ├── repository/
 │   └── cineplex/
-│       └── bookable_movie_subscribers.py # bookable_movie_subscribers persistence
+│       ├── bookable_movie_subscribers.py # bookable_movie_subscribers persistence
+│       └── notified_movies.py            # notified_movies persistence
 └── db/
     ├── connection.py      # asyncpg pool + migration runner
     └── migrations/

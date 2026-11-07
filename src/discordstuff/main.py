@@ -9,11 +9,11 @@ from discordstuff.db.connection import create_pool, run_migrations
 from discordstuff.jobs.base import Job
 from discordstuff.jobs.cineplex.client import CineplexClient
 from discordstuff.jobs.cineplex.job import CineplexJob
-from discordstuff.jobs.cineplex.repository import NotifiedMovieRepository
 from discordstuff.notifications.discord.notifier import DiscordNotifier
 from discordstuff.repository.cineplex.bookable_movie_subscribers import (
     BookableMovieSubscriberRepository,
 )
+from discordstuff.repository.cineplex.notified_movies import NotifiedMovieRepository
 from discordstuff.scheduler import JobScheduler
 
 logging.basicConfig(level=logging.INFO)
