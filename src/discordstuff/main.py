@@ -19,12 +19,11 @@ from discordstuff.scheduler import JobScheduler
 logging.basicConfig(level=logging.INFO)
 
 
-def build_jobs(config: Config, pool: asyncpg.Pool) -> list[Job]:
+def build_jobs(config: Config, pool: asyncpg.Pool, cineplex_client: CineplexClient) -> list[Job]:
     jobs: list[Job] = []
     if "cineplex" in config.enabled_jobs:
-        client = CineplexClient()
         repository = NotifiedMovieRepository(pool)
-        jobs.append(CineplexJob(client, repository))
+        jobs.append(CineplexJob(cineplex_client, repository))
     return jobs
 
 
@@ -35,8 +34,10 @@ async def main() -> None:
     await run_migrations(pool)
 
     subscribers = BookableMovieSubscriberRepository(pool)
-    notifier = DiscordNotifier(config, subscribers)
-    jobs = build_jobs(config, pool)
+    # Shared so the job and /get-bookable-movies reuse one discovered API key.
+    cineplex_client = CineplexClient()
+    notifier = DiscordNotifier(config, subscribers, cineplex_client)
+    jobs = build_jobs(config, pool, cineplex_client)
     scheduler = JobScheduler(
         jobs=jobs, notifier=notifier, interval_seconds=config.job_interval_seconds
     )

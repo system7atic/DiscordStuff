@@ -4,6 +4,7 @@ import discord
 
 from discordstuff.config import Config
 from discordstuff.jobs.cineplex.bookable_movies import MovieBookingInfo, build_batches
+from discordstuff.jobs.cineplex.client import CineplexClient
 from discordstuff.jobs.cineplex.theatres import WatchedTheatre
 from discordstuff.notifications.base import Notification
 from discordstuff.notifications.discord.builder import build_discord_client
@@ -16,8 +17,13 @@ logger = logging.getLogger(__name__)
 
 
 class DiscordNotifier:
-    def __init__(self, config: Config, subscribers: BookableMovieSubscriberRepository):
-        self._discord = build_discord_client(config, subscribers)
+    def __init__(
+        self,
+        config: Config,
+        subscribers: BookableMovieSubscriberRepository,
+        cineplex_client: CineplexClient,
+    ):
+        self._discord = build_discord_client(config, subscribers, cineplex_client)
         self._token = config.discord_bot_token
         self._channel_id = config.discord_channel_id
         self._alert_list = config.alert_list

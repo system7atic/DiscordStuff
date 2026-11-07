@@ -83,8 +83,11 @@ class CineplexClient:
             for theatre in all_theatres
         ]
 
-    async def get_bookable_dates(self, film_id: int) -> list[date]:
-        data = await self._get_json("/v1/dates/bookable", {"filmId": film_id})
+    async def get_bookable_dates(self, film_id: int, theatre_id: int | None = None) -> list[date]:
+        params = {"filmId": film_id}
+        if theatre_id is not None:
+            params["locationId"] = theatre_id
+        data = await self._get_json("/v1/dates/bookable", params)
         return [date.fromisoformat(raw.split("T")[0]) for raw in data]
 
     async def _get_json(self, path: str, params: dict) -> Any:

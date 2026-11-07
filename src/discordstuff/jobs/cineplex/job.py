@@ -1,7 +1,6 @@
 import logging
-from datetime import date
 
-from discordstuff.jobs.cineplex.bookable_movies import MovieBookingInfo
+from discordstuff.jobs.cineplex.bookable_movies import MovieBookingInfo, format_date
 from discordstuff.jobs.cineplex.client import CineplexClient
 from discordstuff.jobs.cineplex.models import BookableMovie
 from discordstuff.jobs.cineplex.theatres import WATCHED_THEATRES, WatchedTheatre
@@ -9,8 +8,6 @@ from discordstuff.notifications.base import Notifier
 from discordstuff.repository.cineplex.notified_movies import NotifiedMovieRepository
 
 logger = logging.getLogger(__name__)
-
-MOVIE_URL_TEMPLATE = "https://www.cineplex.com/movie/{slug}"
 
 
 class CineplexJob:
@@ -47,7 +44,7 @@ class CineplexJob:
         new_movies_by_theatre: dict[WatchedTheatre, list[MovieBookingInfo]] = {}
         booking_info_by_film_id: dict[int, MovieBookingInfo] = {}
         for movie in movies:
-            if self._is_excluded(movie):
+            if movie.is_excluded:
                 continue
             for theatre_id in await self._bookable_watched_theatre_ids(movie.film_id, watched_theatres_by_id):
                 if await self._repository.is_notified(movie.film_id, theatre_id):
@@ -69,19 +66,12 @@ class CineplexJob:
         theatres = await self._client.get_theatres_for_film(film_id)
         return [theatre.theatre_id for theatre in theatres if theatre.theatre_id in watched_theatres_by_id]
 
-    def _is_excluded(self, movie: BookableMovie) -> bool:
-        return movie.is_event or movie.is_international
-
     async def _build_booking_info(self, movie: BookableMovie) -> MovieBookingInfo:
         dates = await self._client.get_bookable_dates(movie.film_id)
-        first_date = _format_date(min(dates)) if dates else "unknown"
+        first_date = format_date(min(dates)) if dates else "unknown"
         return MovieBookingInfo(
             title=movie.title,
             first_bookable_date=first_date,
-            url=MOVIE_URL_TEMPLATE.format(slug=movie.slug),
+            url=movie.url,
             poster_url=movie.poster_url,
         )
-
-
-def _format_date(value: date) -> str:
-    return f"{value:%b} {value.day}, {value.year}"

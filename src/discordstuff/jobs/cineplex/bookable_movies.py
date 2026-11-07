@@ -1,6 +1,15 @@
+import asyncio
 from dataclasses import dataclass
+from datetime import date
 
+from discordstuff.jobs.cineplex.client import CineplexClient
+from discordstuff.jobs.cineplex.models import BookableMovie
 from discordstuff.jobs.cineplex.theatres import WatchedTheatre
+
+# Cineplex has no "movies at this theatre" endpoint, so listing a theatre takes
+# one or two requests per movie. Capped so a command doesn't hammer the API,
+# which sits behind Imperva and is also what the scheduled job depends on.
+MAX_CONCURRENT_REQUESTS = 5
 
 
 @dataclass(frozen=True)
@@ -9,6 +18,13 @@ class MovieBookingInfo:
     first_bookable_date: str
     url: str
     poster_url: str
+
+
+@dataclass(frozen=True)
+class BookableListing:
+    title: str
+    url: str
+    first_bookable_date: date | None
 
 
 @dataclass(frozen=True)
@@ -47,3 +63,40 @@ def build_batches(
         )
         for subscriber_set, theatres in theatre_ids_by_subscriber_set.items()
     ]
+
+
+async def list_bookable_at(
+    client: CineplexClient, theatre: WatchedTheatre
+) -> list[BookableListing]:
+    """Every non-excluded movie currently bookable at one theatre, soonest first.
+    Read-only: this doesn't touch Notified movies, so it has no effect on alerts."""
+    semaphore = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
+
+    async def listing_if_at_theatre(movie: BookableMovie) -> BookableListing | None:
+        async with semaphore:
+            theatres = await client.get_theatres_for_film(movie.film_id)
+            if not any(candidate.theatre_id == theatre.theatre_id for candidate in theatres):
+                return None
+        async with semaphore:
+            dates = await client.get_bookable_dates(movie.film_id, theatre_id=theatre.theatre_id)
+        return BookableListing(
+            title=movie.title,
+            url=movie.url,
+            first_bookable_date=min(dates) if dates else None,
+        )
+
+    movies = await client.get_bookable_movies()
+    results = await asyncio.gather(
+        *(listing_if_at_theatre(movie) for movie in movies if not movie.is_excluded)
+    )
+    return sorted(
+        (listing for listing in results if listing is not None),
+        key=lambda listing: (
+            listing.first_bookable_date or date.max,
+            listing.title.casefold(),
+        ),
+    )
+
+
+def format_date(value: date) -> str:
+    return f"{value:%b} {value.day}, {value.year}"

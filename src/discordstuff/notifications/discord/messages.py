@@ -1,9 +1,13 @@
+from datetime import date
+
 import discord
 
 from discordstuff.jobs.cineplex.bookable_movies import (
+    BookableListing,
     BookableMoviesBatch,
     MovieBookingInfo,
     TheatreSection,
+    format_date,
 )
 from discordstuff.jobs.cineplex.theatres import WatchedTheatre
 from discordstuff.notifications.base import Notification
@@ -16,6 +20,11 @@ NORMAL_COLOR = discord.Color.blue()
 _MAX_COMPONENTS = 40
 _MOVIE_SECTION_COST = 4
 
+# Discord's classic embed limits, which the /get-bookable-movies list has to fit.
+_MAX_EMBED_DESCRIPTION = 4096
+_MAX_MESSAGE_EMBED_CHARS = 6000
+_LIST_INTRO = "Bookable movies and their first bookable date"
+
 
 def build_mention_prefix(subscriber_ids: list[int]) -> str:
     return " ".join(f"<@{user_id}>" for user_id in subscriber_ids)
@@ -25,8 +34,12 @@ def build_failure_message(notification: Notification) -> str:
     return f"{notification.title}: {notification.body}"
 
 
+def theatre_title(theatre: WatchedTheatre) -> str:
+    return f"{theatre.key.title()}: {theatre.name}"
+
+
 def theatre_heading(theatre: WatchedTheatre) -> str:
-    return f"**{theatre.key.title()}: {theatre.name}**"
+    return f"**{theatre_title(theatre)}**"
 
 
 def build_movie_section(movie: MovieBookingInfo) -> discord.ui.Section:
@@ -114,3 +127,53 @@ def build_batch_messages(batch: BookableMoviesBatch) -> list[dict]:
     messages: list[dict] = [{"content": build_message_content(batch.subscriber_ids)}]
     messages.extend({"view": view} for view in build_theatre_layouts(batch))
     return messages
+
+
+def _listing_row(listing: BookableListing, today: date) -> str:
+    if listing.first_bookable_date is None:
+        when = "unknown"
+    elif listing.first_bookable_date == today:
+        when = "Today"
+    else:
+        when = format_date(listing.first_bookable_date)
+    return f"- [{listing.title}]({listing.url}) · {when}"
+
+
+def _list_embed(theatre: WatchedTheatre, rows: list[str], continued: bool) -> discord.Embed:
+    title = theatre_title(theatre)
+    title, lines = (f"{title} (continued)", rows) if continued else (title, [_LIST_INTRO, *rows])
+    return discord.Embed(title=title, description="\n".join(lines), color=NORMAL_COLOR)
+
+
+def build_bookable_list_messages(
+    theatre: WatchedTheatre, listings: list[BookableListing], today: date
+) -> list[dict]:
+    """One theatre's list as a single embed where it fits. Longer lists continue in
+    another embed in the same message, then in further messages once a message
+    reaches Discord's total embed limit, always splitting between movies."""
+    if not listings:
+        return [{"content": f"No bookable movies at {theatre.name} right now."}]
+
+    messages: list[list[discord.Embed]] = [[]]
+    rows: list[str] = []
+    continued = False
+
+    def current_message_chars() -> int:
+        return sum(len(embed) for embed in messages[-1])
+
+    for listing in listings:
+        row = _listing_row(listing, today)
+        candidate = _list_embed(theatre, [*rows, row], continued)
+        fits_embed = len(candidate.description or "") <= _MAX_EMBED_DESCRIPTION
+        if fits_embed and current_message_chars() + len(candidate) <= _MAX_MESSAGE_EMBED_CHARS:
+            rows.append(row)
+            continue
+        messages[-1].append(_list_embed(theatre, rows, continued))
+        rows = [row]
+        continued = True
+        next_embed = _list_embed(theatre, rows, continued)
+        if current_message_chars() + len(next_embed) > _MAX_MESSAGE_EMBED_CHARS:
+            messages.append([])
+
+    messages[-1].append(_list_embed(theatre, rows, continued))
+    return [{"embeds": embeds} for embeds in messages]

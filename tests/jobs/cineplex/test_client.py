@@ -129,6 +129,35 @@ async def test_get_bookable_dates_parses_iso_dates():
 
 
 @pytest.mark.asyncio
+async def test_get_bookable_dates_scopes_to_a_theatre_when_given_one():
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return json_response(DATES_BOOKABLE_SAMPLE)
+
+    client = CineplexClient(transport=httpx.MockTransport(handler), api_key="test-key")
+    await client.get_bookable_dates(34362, theatre_id=1409)
+
+    assert requests[0].url.params["filmId"] == "34362"
+    assert requests[0].url.params["locationId"] == "1409"
+
+
+@pytest.mark.asyncio
+async def test_get_bookable_dates_is_film_wide_without_a_theatre():
+    requests: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return json_response(DATES_BOOKABLE_SAMPLE)
+
+    client = CineplexClient(transport=httpx.MockTransport(handler), api_key="test-key")
+    await client.get_bookable_dates(34362)
+
+    assert "locationId" not in requests[0].url.params
+
+
+@pytest.mark.asyncio
 async def test_discovers_api_key_when_not_provided():
     def handler(request: httpx.Request) -> httpx.Response:
         if str(request.url) == "https://www.cineplex.com/":

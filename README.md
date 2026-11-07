@@ -24,7 +24,7 @@ src/discordstuff/
 │   ├── base.py           # Job protocol
 │   └── cineplex/         # first Job: Cineplex ticket-availability alerts
 │       ├── client.py          # Cineplex API wrapper
-│       ├── bookable_movies.py # movie/batch domain types + grouping logic
+│       ├── bookable_movies.py # movie/batch domain types, grouping logic + per-theatre listing
 │       └── job.py
 ├── repository/
 │   └── cineplex/
@@ -76,7 +76,7 @@ To publish a new image after a code change (from your dev machine): `make push`.
 
 ## Cineplex job
 
-Tracks which movies become newly bookable at a fixed, small set of watched theatres and posts a Discord message for each one. Runs hourly, filtering out special-event listings and international/subtitled releases so subscribers only hear about things they'd actually want to book. Needs no configuration — the watched theatres, exclusion rules, and notified-movie tracking all live under `src/discordstuff/jobs/cineplex/`.
+Tracks which movies become newly bookable at a fixed, small set of watched theatres and posts a Discord message for each one. Runs hourly, filtering out special-event listings and international/subtitled releases so subscribers only hear about things they'd actually want to book. Needs no configuration — the watched theatres, exclusion rules, and notified-movie tracking all live under `src/discordstuff/jobs/cineplex/`. While the job is enabled, `/get-bookable-movies` posts a theatre's current list on demand, without affecting alerts.
 
 ## Development
 

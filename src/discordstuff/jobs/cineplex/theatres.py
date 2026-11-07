@@ -1,4 +1,9 @@
 from dataclasses import dataclass
+from zoneinfo import ZoneInfo
+
+# Every watched Theatre is in Metro Vancouver, so "today" at a Theatre is always
+# this zone's date, whatever the clock on the machine running the bot says.
+THEATRE_TIMEZONE = ZoneInfo("America/Vancouver")
 
 
 @dataclass(frozen=True)
