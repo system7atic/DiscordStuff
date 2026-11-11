@@ -8,6 +8,9 @@ from discordstuff.jobs.cineplex.models import BookableMovie, Theatre
 
 BASE_URL = "https://apis.cineplex.com/prod/cpx/theatrical/api"
 REQUEST_TIMEOUT_SECONDS = 15
+# Retries only failures to establish a connection (TCP connect or TLS handshake),
+# never a request Cineplex already received, so it's safe for any request.
+CONNECT_RETRIES = 3
 
 # The subscription key is a public front-end key, hardcoded by Cineplex into
 # their own Next.js app bundle - not a per-user secret. We pull it from there
@@ -109,13 +112,17 @@ class CineplexClient:
             base_url=BASE_URL,
             headers=headers,
             timeout=REQUEST_TIMEOUT_SECONDS,
-            transport=self._transport,
+            transport=self._make_transport(),
         ) as http_client:
             return await http_client.get(path, params=params)
 
+    def _make_transport(self) -> httpx.AsyncBaseTransport:
+        # A fresh transport per client, since closing an AsyncClient closes its transport.
+        return self._transport or httpx.AsyncHTTPTransport(retries=CONNECT_RETRIES)
+
     async def _discover_api_key(self) -> str:
         async with httpx.AsyncClient(
-            timeout=REQUEST_TIMEOUT_SECONDS, transport=self._transport
+            timeout=REQUEST_TIMEOUT_SECONDS, transport=self._make_transport()
         ) as http_client:
             home_response = await http_client.get(HOMEPAGE_URL)
             home_response.raise_for_status()
