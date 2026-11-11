@@ -16,7 +16,8 @@ NORMAL_COLOR = discord.Color.blue()
 
 # Discord caps a message's Components V2 tree at 40 components total (recursively,
 # including the container itself). A movie's Section costs 4: the Section, its
-# Thumbnail accessory, and its 2 TextDisplay children.
+# Thumbnail accessory, and its 2 TextDisplay children. A poster-less movie is a
+# single TextDisplay instead, so 4 stays a safe upper bound.
 _MAX_COMPONENTS = 40
 _MOVIE_SECTION_COST = 4
 
@@ -42,10 +43,16 @@ def theatre_heading(theatre: WatchedTheatre) -> str:
     return f"**{theatre_title(theatre)}**"
 
 
-def build_movie_section(movie: MovieBookingInfo) -> discord.ui.Section:
+def build_movie_section(movie: MovieBookingInfo) -> discord.ui.Section | discord.ui.TextDisplay:
+    title_line = f"[{movie.title}]({movie.url})"
+    date_line = f"Bookable from {movie.first_bookable_date}"
+    # Discord requires a Section to have an accessory, so a movie Cineplex has
+    # no poster for falls back to plain text.
+    if not movie.poster_url:
+        return discord.ui.TextDisplay(f"{title_line}\n{date_line}")
     return discord.ui.Section(
-        discord.ui.TextDisplay(f"[{movie.title}]({movie.url})"),
-        discord.ui.TextDisplay(f"Bookable from {movie.first_bookable_date}"),
+        discord.ui.TextDisplay(title_line),
+        discord.ui.TextDisplay(date_line),
         accessory=discord.ui.Thumbnail(media=movie.poster_url),
     )
 

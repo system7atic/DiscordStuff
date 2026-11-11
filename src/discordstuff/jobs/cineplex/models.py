@@ -10,7 +10,7 @@ class BookableMovie:
     slug: str
     is_event: bool
     is_international: bool
-    poster_url: str
+    poster_url: str | None
 
     @property
     def is_excluded(self) -> bool:

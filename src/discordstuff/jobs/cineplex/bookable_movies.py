@@ -17,7 +17,7 @@ class MovieBookingInfo:
     title: str
     first_bookable_date: str
     url: str
-    poster_url: str
+    poster_url: str | None
 
 
 @dataclass(frozen=True)

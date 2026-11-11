@@ -66,7 +66,8 @@ class CineplexClient:
                 slug=movie["filmUrl"],
                 is_event=movie["isEvent"],
                 is_international=_is_international(movie),
-                poster_url=movie["mediumPosterImageUrl"],
+                # Null for some films (seen 2026-11-11), so this is optional.
+                poster_url=movie.get("mediumPosterImageUrl"),
             )
             for movie in data
         ]

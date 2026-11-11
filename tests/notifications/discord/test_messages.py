@@ -1,4 +1,5 @@
 import discord
+import pytest
 
 from discordstuff.jobs.cineplex.bookable_movies import (
     BookableMoviesBatch,
@@ -116,6 +117,37 @@ def test_theatre_layout_combines_theatres_into_one_card_when_everything_fits():
     assert avengers.accessory.media.url == "https://example.com/avengers.jpg"
     assert zootopia.accessory.media.url == "https://example.com/zootopia.jpg"
     assert toy_story.accessory.media.url == "https://example.com/toy-story-5.jpg"
+
+
+@pytest.mark.parametrize("poster_url", [None, ""])
+def test_theatre_layout_falls_back_to_plain_text_for_a_movie_without_a_poster(poster_url):
+    batch = BookableMoviesBatch(
+        subscriber_ids=[],
+        sections=[
+            TheatreSection(
+                theatre=RICHMOND,
+                movies=[
+                    MovieBookingInfo(
+                        title="Mystery Film",
+                        first_bookable_date="Dec 17, 2026",
+                        url="https://www.cineplex.com/movie/mystery-film",
+                        poster_url=poster_url,
+                    )
+                ],
+            )
+        ],
+    )
+
+    [view] = build_theatre_layouts(batch)
+
+    [container] = view.children
+    _heading, movie = container.children
+    assert isinstance(movie, discord.ui.TextDisplay)
+    assert movie.content == (
+        "[Mystery Film](https://www.cineplex.com/movie/mystery-film)\nBookable from Dec 17, 2026"
+    )
+    # The original crash only surfaced when discord.py serialized the view to send it.
+    view.to_components()
 
 
 def test_theatre_layout_splits_into_one_card_per_theatre_when_combined_would_overflow():
