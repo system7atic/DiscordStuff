@@ -5,6 +5,7 @@ import pytest
 from discordstuff.jobs.cineplex.job import CineplexJob
 from discordstuff.jobs.cineplex.models import BookableMovie
 from discordstuff.jobs.cineplex.theatres import WatchedTheatre
+from discordstuff.notifications.base import BookableMoviesSendError
 
 RICHMOND = WatchedTheatre(key="richmond", theatre_id=1409, name="SilverCity Riverport Cinemas")
 METROPOLIS = WatchedTheatre(key="metropolis", theatre_id=1408, name="Cineplex Cinemas Metropolis")
@@ -36,16 +37,29 @@ RAMAYANA_INTERNATIONAL = BookableMovie(
 )
 
 
+TOY_STORY = BookableMovie(
+    film_id=40001,
+    title="Toy Story 5",
+    slug="toy-story-5",
+    is_event=False,
+    is_international=False,
+    poster_url=None,
+)
+
+
 class FakeClient:
-    def __init__(self, movies, theatres_by_film_id, dates_by_film_id=None):
+    def __init__(self, movies, theatres_by_film_id, dates_by_film_id=None, failing_film_ids=()):
         self._movies = movies
         self._theatres_by_film_id = theatres_by_film_id
         self._dates_by_film_id = dates_by_film_id or {}
+        self._failing_film_ids = set(failing_film_ids)
 
     async def get_bookable_movies(self):
         return self._movies
 
     async def get_theatres_for_film(self, film_id):
+        if film_id in self._failing_film_ids:
+            raise ConnectionError("simulated dropped Cineplex request")
         return self._theatres_by_film_id.get(film_id, [])
 
     async def get_bookable_dates(self, film_id):
@@ -82,6 +96,11 @@ class FakeNotifier:
 
     async def send_error(self, notification):
         raise AssertionError("send_error should not be called directly by the job")
+
+
+class FailingNotifier(FakeNotifier):
+    async def send_bookable_movies(self, theatre_movies):
+        raise RuntimeError("simulated Discord send failure")
 
 
 @pytest.mark.asyncio
@@ -250,3 +269,118 @@ async def test_groups_movie_bookable_at_multiple_watched_theatres_into_one_batch
     assert len(notifier.sent) == 1
     [theatre_movies] = notifier.sent
     assert set(theatre_movies.keys()) == {RICHMOND, METROPOLIS}
+
+
+@pytest.mark.asyncio
+async def test_failed_send_leaves_movies_unmarked_so_the_next_run_retries():
+    client = FakeClient(
+        movies=[AVENGERS],
+        theatres_by_film_id={34362: [FakeTheatre(RICHMOND.theatre_id)]},
+    )
+    repository = FakeRepository(seeded_theatre_ids={RICHMOND.theatre_id})
+    job = CineplexJob(client, repository, theatres=[RICHMOND])
+
+    with pytest.raises(RuntimeError):
+        await job.run(FailingNotifier())
+    assert not await repository.is_notified(34362, RICHMOND.theatre_id)
+
+    notifier = FakeNotifier()
+    await job.run(notifier)
+    [theatre_movies] = notifier.sent
+    assert [movie.title for movie in theatre_movies[RICHMOND]] == ["Avengers: Doomsday"]
+    assert await repository.is_notified(34362, RICHMOND.theatre_id)
+
+
+@pytest.mark.asyncio
+async def test_cineplex_failure_partway_through_leaves_earlier_movies_unmarked():
+    client = FakeClient(
+        movies=[AVENGERS, TOY_STORY],
+        theatres_by_film_id={34362: [FakeTheatre(RICHMOND.theatre_id)]},
+        failing_film_ids={TOY_STORY.film_id},
+    )
+    repository = FakeRepository(seeded_theatre_ids={RICHMOND.theatre_id})
+    notifier = FakeNotifier()
+    job = CineplexJob(client, repository, theatres=[RICHMOND])
+
+    with pytest.raises(ConnectionError):
+        await job.run(notifier)
+
+    assert notifier.sent == []
+    assert not await repository.is_notified(34362, RICHMOND.theatre_id)
+
+
+@pytest.mark.asyncio
+async def test_cineplex_failure_during_seeding_leaves_the_theatre_unseeded():
+    """A half-finished seed must not leave the theatre with some rows, or the next
+    run would treat it as seeded and announce every remaining movie as new."""
+    client = FakeClient(
+        movies=[AVENGERS, TOY_STORY],
+        theatres_by_film_id={34362: [FakeTheatre(RICHMOND.theatre_id)]},
+        failing_film_ids={TOY_STORY.film_id},
+    )
+    repository = FakeRepository()
+    job = CineplexJob(client, repository, theatres=[RICHMOND])
+
+    with pytest.raises(ConnectionError):
+        await job.run(FakeNotifier())
+
+    assert not await repository.has_any(RICHMOND.theatre_id)
+
+
+class PartlyFailingNotifier(FakeNotifier):
+    def __init__(self, unsent_theatres):
+        super().__init__()
+        self._unsent_theatres = unsent_theatres
+
+    async def send_bookable_movies(self, theatre_movies):
+        self.sent.append(theatre_movies)
+        raise BookableMoviesSendError(self._unsent_theatres, "simulated partial failure")
+
+
+@pytest.mark.asyncio
+async def test_partial_send_failure_only_leaves_unsent_theatres_to_retry():
+    client = FakeClient(
+        movies=[AVENGERS],
+        theatres_by_film_id={34362: [FakeTheatre(RICHMOND.theatre_id), FakeTheatre(METROPOLIS.theatre_id)]},
+    )
+    repository = FakeRepository(seeded_theatre_ids={RICHMOND.theatre_id, METROPOLIS.theatre_id})
+    job = CineplexJob(client, repository, theatres=[RICHMOND, METROPOLIS])
+
+    with pytest.raises(BookableMoviesSendError):
+        await job.run(PartlyFailingNotifier(unsent_theatres={METROPOLIS}))
+
+    assert await repository.is_notified(34362, RICHMOND.theatre_id)
+    assert not await repository.is_notified(34362, METROPOLIS.theatre_id)
+
+
+@pytest.mark.asyncio
+async def test_partial_send_failure_does_not_block_seeding_another_theatre():
+    client = FakeClient(
+        movies=[AVENGERS],
+        theatres_by_film_id={34362: [FakeTheatre(RICHMOND.theatre_id), FakeTheatre(METROPOLIS.theatre_id)]},
+    )
+    # Richmond is established; Metropolis is newly added and should seed silently.
+    repository = FakeRepository(seeded_theatre_ids={RICHMOND.theatre_id})
+    job = CineplexJob(client, repository, theatres=[RICHMOND, METROPOLIS])
+
+    with pytest.raises(BookableMoviesSendError):
+        await job.run(PartlyFailingNotifier(unsent_theatres={RICHMOND}))
+
+    assert not await repository.is_notified(34362, RICHMOND.theatre_id)
+    assert await repository.is_notified(34362, METROPOLIS.theatre_id)
+
+
+@pytest.mark.asyncio
+async def test_film_listed_twice_is_only_announced_once():
+    client = FakeClient(
+        movies=[AVENGERS, AVENGERS],
+        theatres_by_film_id={34362: [FakeTheatre(RICHMOND.theatre_id)]},
+    )
+    repository = FakeRepository(seeded_theatre_ids={RICHMOND.theatre_id})
+    notifier = FakeNotifier()
+    job = CineplexJob(client, repository, theatres=[RICHMOND])
+
+    await job.run(notifier)
+
+    [theatre_movies] = notifier.sent
+    assert [movie.title for movie in theatre_movies[RICHMOND]] == ["Avengers: Doomsday"]

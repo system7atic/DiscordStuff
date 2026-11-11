@@ -3,10 +3,15 @@ import logging
 import discord
 
 from discordstuff.config import Config
-from discordstuff.jobs.cineplex.bookable_movies import MovieBookingInfo, build_batches
+from discordstuff.errors import describe_exception
+from discordstuff.jobs.cineplex.bookable_movies import (
+    BookableMoviesBatch,
+    MovieBookingInfo,
+    build_batches,
+)
 from discordstuff.jobs.cineplex.client import CineplexClient
 from discordstuff.jobs.cineplex.theatres import WatchedTheatre
-from discordstuff.notifications.base import Notification
+from discordstuff.notifications.base import BookableMoviesSendError, Notification
 from discordstuff.notifications.discord.builder import build_discord_client
 from discordstuff.notifications.discord.messages import build_batch_messages, build_failure_message
 from discordstuff.repository.cineplex.bookable_movie_subscribers import (
@@ -14,6 +19,41 @@ from discordstuff.repository.cineplex.bookable_movie_subscribers import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+async def send_batches(channel: discord.abc.Messageable, batches: list[BookableMoviesBatch]) -> None:
+    """Sends every batch, carrying on past one that fails so it can't hold up the
+    others, then raises BookableMoviesSendError naming the theatres in batches
+    that failed before any of their messages went out."""
+    unsent: set[WatchedTheatre] = set()
+    failures: list[str] = []
+    for batch in batches:
+        names = ", ".join(section.theatre.name for section in batch.sections)
+        sent_any = False
+        try:
+            for message in build_batch_messages(batch):
+                await channel.send(**message)
+                sent_any = True
+        except Exception as exc:
+            failures.append(f"{names}: {describe_exception(exc)}")
+            if sent_any:
+                logger.exception(
+                    "Failed partway through announcing new movies at %s - not retrying, "
+                    "since subscribers were already pinged",
+                    names,
+                )
+            else:
+                logger.exception("Failed to announce new movies at %s, will retry next run", names)
+                unsent.update(section.theatre for section in batch.sections)
+            continue
+        logger.info(
+            "Announced %d new movies at %s to %d subscribers",
+            sum(len(section.movies) for section in batch.sections),
+            names,
+            len(batch.subscriber_ids),
+        )
+    if failures:
+        raise BookableMoviesSendError(unsent, "; ".join(failures))
 
 
 class DiscordNotifier:
@@ -51,15 +91,7 @@ class DiscordNotifier:
         unsubscribed = [theatre.name for theatre in theatre_movies if theatre not in batched]
         if unsubscribed:
             logger.info("No subscribers at %s, not announcing their new movies", ", ".join(unsubscribed))
-        for batch in batches:
-            for message in build_batch_messages(batch):
-                await channel.send(**message)
-            logger.info(
-                "Announced %d new movies at %s to %d subscribers",
-                sum(len(section.movies) for section in batch.sections),
-                ", ".join(section.theatre.name for section in batch.sections),
-                len(batch.subscriber_ids),
-            )
+        await send_batches(channel, batches)
 
     async def send_error(self, notification: Notification) -> None:
         if not self._alert_list:
