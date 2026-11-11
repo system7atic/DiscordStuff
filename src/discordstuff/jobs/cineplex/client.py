@@ -1,3 +1,4 @@
+import logging
 import re
 from datetime import date
 from typing import Any
@@ -5,6 +6,8 @@ from typing import Any
 import httpx
 
 from discordstuff.jobs.cineplex.models import BookableMovie, Theatre
+
+logger = logging.getLogger(__name__)
 
 BASE_URL = "https://apis.cineplex.com/prod/cpx/theatrical/api"
 REQUEST_TIMEOUT_SECONDS = 15
@@ -100,6 +103,11 @@ class CineplexClient:
 
         response = await self._request(path, params)
         if response.status_code in (401, 403):
+            logger.warning(
+                "Cineplex rejected the subscription key (%s on %s), re-discovering it",
+                response.status_code,
+                path,
+            )
             self._api_key = await self._discover_api_key()
             response = await self._request(path, params)
 
@@ -143,6 +151,7 @@ class CineplexClient:
                     "Could not find a subscription key in Cineplex's app bundle - the site's "
                     "internals likely changed."
                 )
+            logger.info("Discovered Cineplex subscription key from %s", chunk_match.group(1))
             return key_match.group(1)
 
     def _raise_for_cineplex_errors(self, response: httpx.Response) -> None:

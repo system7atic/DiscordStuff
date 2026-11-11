@@ -79,3 +79,19 @@ def test_from_env_is_dev_false_for_prod(monkeypatch):
     monkeypatch.setenv("APP_ENV", "prod")
 
     assert Config.from_env().is_dev is False
+
+
+def test_from_env_names_the_variable_when_an_integer_is_malformed(monkeypatch):
+    _set_required_env(monkeypatch)
+    monkeypatch.setenv("JOB_INTERVAL_SECONDS", "30m")
+
+    with pytest.raises(ValueError, match="JOB_INTERVAL_SECONDS.*'30m'"):
+        Config.from_env()
+
+
+def test_from_env_names_alert_list_when_a_user_id_is_malformed(monkeypatch):
+    _set_required_env(monkeypatch)
+    monkeypatch.setenv("ALERT_LIST", "111,@daniel")
+
+    with pytest.raises(ValueError, match="ALERT_LIST"):
+        Config.from_env()

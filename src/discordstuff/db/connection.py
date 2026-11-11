@@ -1,8 +1,15 @@
+import logging
 from pathlib import Path
 
 import asyncpg
 
+logger = logging.getLogger(__name__)
+
 MIGRATIONS_DIR = Path(__file__).parent / "migrations"
+
+
+class MigrationError(Exception):
+    """Raised when a migration file fails to apply, naming the file."""
 
 
 async def create_pool(database_url: str) -> asyncpg.Pool:
@@ -25,9 +32,13 @@ async def run_migrations(pool: asyncpg.Pool) -> None:
         for migration_file in sorted(MIGRATIONS_DIR.glob("*.sql")):
             if migration_file.name in applied:
                 continue
-            async with conn.transaction():
-                await conn.execute(migration_file.read_text())
-                await conn.execute(
-                    "INSERT INTO applied_migrations (filename) VALUES ($1)",
-                    migration_file.name,
-                )
+            logger.info("Applying migration %s", migration_file.name)
+            try:
+                async with conn.transaction():
+                    await conn.execute(migration_file.read_text())
+                    await conn.execute(
+                        "INSERT INTO applied_migrations (filename) VALUES ($1)",
+                        migration_file.name,
+                    )
+            except asyncpg.PostgresError as exc:
+                raise MigrationError(f"Migration {migration_file.name} failed: {exc}") from exc

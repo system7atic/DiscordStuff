@@ -56,6 +56,15 @@ def test_build_failure_message_combines_title_and_body():
     assert build_failure_message(notification) == "Job 'cineplex' failed: boom"
 
 
+def test_build_failure_message_truncates_to_discords_message_limit():
+    notification = Notification(title="Job 'cineplex' failed", body="x" * 5000)
+
+    message = build_failure_message(notification)
+
+    assert len(message) == 2000
+    assert message.endswith("…")
+
+
 def test_theatre_layout_combines_theatres_into_one_card_when_everything_fits():
     batch = BookableMoviesBatch(
         subscriber_ids=[111],

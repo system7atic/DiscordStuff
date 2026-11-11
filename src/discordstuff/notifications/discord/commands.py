@@ -116,6 +116,8 @@ def register_get_bookable_movies_command(
         watched = THEATRES_BY_KEY[theatre.value]
         # Fetching takes a few seconds, well past Discord's 3-second reply window.
         await interaction.response.defer()
+        # Handled here rather than by the tree's catch-all, for a more specific
+        # message - a Cineplex hiccup is far likelier than a bug in this command.
         try:
             listings = await list_bookable_at(cineplex_client, watched)
         except Exception:

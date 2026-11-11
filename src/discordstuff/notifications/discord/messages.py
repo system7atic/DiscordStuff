@@ -21,6 +21,8 @@ NORMAL_COLOR = discord.Color.blue()
 _MAX_COMPONENTS = 40
 _MOVIE_SECTION_COST = 4
 
+_MAX_MESSAGE_CONTENT = 2000
+
 # Discord's classic embed limits, which the /get-bookable-movies list has to fit.
 _MAX_EMBED_DESCRIPTION = 4096
 _MAX_MESSAGE_EMBED_CHARS = 6000
@@ -32,7 +34,11 @@ def build_mention_prefix(subscriber_ids: list[int]) -> str:
 
 
 def build_failure_message(notification: Notification) -> str:
-    return f"{notification.title}: {notification.body}"
+    message = f"{notification.title}: {notification.body}"
+    # Discord rejects messages over its limit outright, which would lose the alert.
+    if len(message) > _MAX_MESSAGE_CONTENT:
+        message = message[: _MAX_MESSAGE_CONTENT - 1] + "…"
+    return message
 
 
 def theatre_title(theatre: WatchedTheatre) -> str:

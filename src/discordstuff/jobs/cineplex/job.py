@@ -43,6 +43,7 @@ class CineplexJob:
 
         new_movies_by_theatre: dict[WatchedTheatre, list[MovieBookingInfo]] = {}
         booking_info_by_film_id: dict[int, MovieBookingInfo] = {}
+        seeded_count_by_theatre: dict[WatchedTheatre, int] = {}
         for movie in movies:
             if movie.is_excluded:
                 continue
@@ -50,15 +51,28 @@ class CineplexJob:
                 if await self._repository.is_notified(movie.film_id, theatre_id):
                     continue
                 await self._repository.mark_notified(movie.film_id, movie.title, theatre_id)
+                theatre = watched_theatres_by_id[theatre_id]
                 if theatre_id in seeding_theatre_ids:
+                    seeded_count_by_theatre[theatre] = seeded_count_by_theatre.get(theatre, 0) + 1
                     continue
                 if movie.film_id not in booking_info_by_film_id:
                     booking_info_by_film_id[movie.film_id] = await self._build_booking_info(movie)
-                theatre = watched_theatres_by_id[theatre_id]
                 new_movies_by_theatre.setdefault(theatre, []).append(booking_info_by_film_id[movie.film_id])
 
         if new_movies_by_theatre:
             await notifier.send_bookable_movies(new_movies_by_theatre)
+
+        for theatre, count in seeded_count_by_theatre.items():
+            logger.info("Silently seeded %d movies for first run at %s", count, theatre.name)
+        new_counts = ", ".join(
+            f"{theatre.name}: {len(theatre_movies)}"
+            for theatre, theatre_movies in new_movies_by_theatre.items()
+        )
+        logger.info(
+            "Checked %d bookable movies; newly bookable at watched theatres: %s",
+            sum(1 for movie in movies if not movie.is_excluded),
+            new_counts or "none",
+        )
 
     async def _bookable_watched_theatre_ids(
         self, film_id: int, watched_theatres_by_id: dict[int, WatchedTheatre]

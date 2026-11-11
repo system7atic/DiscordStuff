@@ -46,11 +46,25 @@ class DiscordNotifier:
                 "receive messages - configure a text channel ID instead."
             )
         subscribers_by_theatre = await self._subscribers.list_all_grouped_by_theatre()
-        for batch in build_batches(theatre_movies, subscribers_by_theatre):
+        batches = build_batches(theatre_movies, subscribers_by_theatre)
+        batched = {section.theatre for batch in batches for section in batch.sections}
+        unsubscribed = [theatre.name for theatre in theatre_movies if theatre not in batched]
+        if unsubscribed:
+            logger.info("No subscribers at %s, not announcing their new movies", ", ".join(unsubscribed))
+        for batch in batches:
             for message in build_batch_messages(batch):
                 await channel.send(**message)
+            logger.info(
+                "Announced %d new movies at %s to %d subscribers",
+                sum(len(section.movies) for section in batch.sections),
+                ", ".join(section.theatre.name for section in batch.sections),
+                len(batch.subscriber_ids),
+            )
 
     async def send_error(self, notification: Notification) -> None:
+        if not self._alert_list:
+            logger.warning("ALERT_LIST is empty, so nobody was DMed about: %s", notification.title)
+            return
         await self._discord.wait_until_ready()
         message = build_failure_message(notification)
         for user_id in self._alert_list:
